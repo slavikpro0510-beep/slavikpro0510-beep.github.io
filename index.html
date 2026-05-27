@@ -3,19 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>ITSkillCheap Web App</title>
-    <!-- Подключаем API Telegram Web App -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Подключаем шрифт Roboto, как в презентации Google -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     
     <style>
-        /* Цветовая палитра из презентации Material You */
         :root {
-            --bg-color: #F4F6F0; /* Светлый кремово-зеленый фон */
+            --bg-color: #F4F6F0;
             --text-main: #1A1C18;
             --text-secondary: #43493E;
-            --card-bg: rgba(255, 255, 255, 0.75); /* Стекло */
+            --card-bg: rgba(255, 255, 255, 0.75);
             --card-border: rgba(255, 255, 255, 0.5);
             --tag-bg: #E2E4D8;
             --btn-bg: #386A46;
@@ -35,7 +33,6 @@
             min-height: 100vh;
         }
 
-        /* --- РАЗМЫТЫЕ ФОНОВЫЕ КЛЯКСЫ (BLUR) --- */
         .blob {
             position: fixed;
             border-radius: 50%;
@@ -45,22 +42,15 @@
         }
         .blob-1 {
             width: 280px; height: 280px;
-            background-color: #A6C8AE; /* Мятно-зеленый */
+            background-color: #A6C8AE;
             top: -50px; left: -80px;
         }
         .blob-2 {
             width: 320px; height: 320px;
-            background-color: #CDE3D0; /* Светло-зеленый */
+            background-color: #CDE3D0;
             bottom: -100px; right: -100px;
         }
-        .blob-3 {
-            width: 200px; height: 200px;
-            background-color: #8EB397; /* Более насыщенный */
-            top: 40%; left: 60%;
-            filter: blur(100px);
-        }
 
-        /* --- ШАПКА ПРИЛОЖЕНИЯ --- */
         .header {
             text-align: center;
             margin-bottom: 28px;
@@ -70,16 +60,13 @@
             font-size: 26px;
             font-weight: 700;
             margin: 0 0 6px 0;
-            letter-spacing: -0.5px;
         }
         .header p {
             font-size: 14px;
             color: var(--text-secondary);
             margin: 0;
-            line-height: 1.4;
         }
 
-        /* --- КАРТОЧКИ КУРСОВ (ВИДЖЕТЫ) --- */
         #courses-container {
             display: flex;
             flex-direction: column;
@@ -92,13 +79,9 @@
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--card-border);
-            border-radius: 24px; /* Мягкие углы как в Android */
+            border-radius: 24px;
             padding: 20px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-            transition: transform 0.1s ease;
-        }
-        .course-card:active {
-            transform: scale(0.98);
         }
 
         .course-title {
@@ -141,91 +124,77 @@
             border-radius: 20px;
             font-size: 14px;
             font-weight: 500;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(56, 106, 70, 0.3);
             text-decoration: none;
         }
     </style>
 </head>
 <body>
 
-    <!-- Фоновые кляксы -->
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
-    <div class="blob blob-3"></div>
 
     <div class="header">
         <h1>ITSkillCheap</h1>
-        <p>Минималистичный агрегатор скидок<br>на образовательные ИТ-курсы</p>
+        <p>Минималистичный агрегатор скидок</p>
     </div>
 
-    <!-- Контейнер, куда скрипт вставит карточки -->
-    <div id="courses-container"></div>
+    <div id="courses-container">
+        <p style="text-align:center;">Загрузка данных...</p>
+    </div>
 
     <script>
-        // Инициализация Telegram Web App
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем на весь экран
-        
-        // Говорим телеграму, что цвет фона и хедера берем из нашей темы
+        tg.expand(); 
         tg.setHeaderColor('#F4F6F0');
         tg.setBackgroundColor('#F4F6F0');
         tg.ready();
 
-        // Имитация получения данных из твоего API (БД SQLite3)
-        // На защите скажешь: "Сейчас данные подгружаются из JSON-массива для симуляции ответа от бэкенда"
-        const apiData = [
-            {
-                title: "⚡ Электрические цепи постоянного тока",
-                platform: "Stepik",
-                price: 0,
-                link: "#"
-            },
-            {
-                title: "🔹 Pandas для собеседований: 50 задач",
-                platform: "Stepik",
-                price: 390,
-                link: "#"
-            },
-            {
-                title: "🐍 Python-разработчик с нуля",
-                platform: "Stepik",
-                price: 1500,
-                link: "#"
-            }
-        ];
-
-        // Функция форматирования цены (Распознавание цен из презентации)
         function formatPrice(price) {
-            if (price === 0 || price === null) {
+            if (price === 0 || price === '0' || price === null) {
                 return '<span class="course-price price-free">🎁 БЕСПЛАТНО</span>';
             }
             return `<span class="course-price">💰 ${price} ₽</span>`;
         }
 
-        // Функция отрисовки карточек на странице
         function renderCourses(courses) {
             const container = document.getElementById('courses-container');
-            container.innerHTML = ''; // Очищаем контейнер перед загрузкой
+            container.innerHTML = ''; 
+
+            if (courses.length === 0) {
+                container.innerHTML = '<p style="text-align:center;">Нет данных в базе.</p>';
+                return;
+            }
 
             courses.forEach(course => {
                 const card = document.createElement('div');
                 card.className = 'course-card';
-                
                 card.innerHTML = `
                     <div class="course-title">${course.title}</div>
                     <div class="course-platform">Платформа: ${course.platform}</div>
                     <div class="course-footer">
                         ${formatPrice(course.price)}
-                        <a href="${course.link}" class="btn-view" onclick="tg.close()">Смотреть</a>
+                        <a href="#" class="btn-view" onclick="tg.close()">Смотреть</a>
                     </div>
                 `;
                 container.appendChild(card);
             });
         }
 
-        // Запускаем рендер при загрузке страницы
-        renderCourses(apiData);
+        // Твоя ссылка от ngrok
+        const API_URL = 'https://eb08-5-3-220-43.ngrok-free.app/api/courses'; 
+
+        // Делаем запрос к твоему компу
+        fetch(API_URL, {
+            headers: {
+                'ngrok-skip-browser-warning': 'true'
+            }
+        })
+        .then(response => response.json())
+        .then(data => renderCourses(data))
+        .catch(error => {
+            console.error('Ошибка:', error);
+            document.getElementById('courses-container').innerHTML = '<p style="text-align:center;">Сервер не отвечает.</p>';
+        });
     </script>
 </body>
 </html>
