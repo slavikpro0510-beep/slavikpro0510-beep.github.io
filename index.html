@@ -12,33 +12,41 @@
             --bg-color: #F4F6F0;
             --text-main: #1A1C18;
             --text-secondary: #43493E;
-            --card-bg: rgba(255, 255, 255, 0.75);
             --btn-bg: #386A46;
-            --btn-text: #FFFFFF;
+            --price-free: #2E6C3F; /* Темно-зеленый для бесплатных */
         }
-
         body { font-family: 'Roboto', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 15px; }
         
-        .tabs { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
-        .tab-btn { background: #E2E4D8; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; color: #386A46; cursor: pointer; white-space: nowrap; }
-        .tab-btn.active { background: var(--btn-bg); color: var(--btn-text); }
+        .tabs { display: flex; gap: 8px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 5px; }
+        .tab-btn { background: #E2E4D8; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; color: #386A46; cursor: pointer; }
+        .tab-btn.active { background: var(--btn-bg); color: #fff; }
 
-        .course-card { background: var(--card-bg); padding: 15px; border-radius: 16px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .filter-panel { background: rgba(255,255,255,0.5); padding: 10px; border-radius: 12px; margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .filter-panel input { width: 70px; padding: 5px; border-radius: 8px; border: 1px solid #ccc; }
+        
+        .course-card { background: rgba(255, 255, 255, 0.8); padding: 15px; border-radius: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .course-title { font-weight: 700; font-size: 16px; margin-bottom: 5px; }
-        .course-platform { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; }
-        .course-footer { display: flex; justify-content: space-between; align-items: center; }
-        .btn-view { background: var(--btn-bg); color: white; padding: 8px 16px; border-radius: 20px; text-decoration: none; font-size: 13px; }
+        .course-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .price-text { font-weight: 600; font-size: 14px; }
+        .price-free { color: var(--price-free); }
+        .btn-view { background: var(--btn-bg); color: white; padding: 6px 14px; border-radius: 20px; text-decoration: none; font-size: 13px; }
     </style>
 </head>
 <body>
 
     <div class="tabs">
-        <button class="tab-btn active" onclick="filterCourses('all', this, 'ВСЕ ДОСТУПНЫЕ КУРСЫ')">Все</button>
-        <button class="tab-btn" onclick="filterCourses('python', this, 'РАЗРАБОТКА & IT')">IT & Код</button>
-        <button class="tab-btn" onclick="filterCourses('other', this, 'ГУМАНИТАРНЫЕ & ХОББИ')">Хобби</button>
+        <button class="tab-btn active" onclick="setCategory('all', this)">Все</button>
+        <button class="tab-btn" onclick="setCategory('python', this)">IT & Код</button>
+        <button class="tab-btn" onclick="setCategory('other', this)">Хобби</button>
     </div>
 
-    <div id="courses-container">Загрузка...</div>
+    <div class="filter-panel">
+        <input type="number" id="minPrice" placeholder="От ₽" oninput="applyFilters()">
+        <input type="number" id="maxPrice" placeholder="До ₽" oninput="applyFilters()">
+        <label style="font-size: 12px;"><input type="checkbox" id="onlyFree" onchange="applyFilters()"> Только бесплатные</label>
+    </div>
+
+    <div id="courses-container">Загрузка данных...</div>
 
     <script>
         const tg = window.Telegram.WebApp;
@@ -46,24 +54,38 @@
         tg.ready();
 
         let allCourses = [];
+        let currentCategory = 'all';
 
-        function renderCourses(courses, title) {
+        function formatPrice(price) {
+            // Если цена пустая, "0", "-" или null -> Бесплатно
+            if (!price || price == 0 || price == '-' || String(price).toLowerCase().includes('бесплатно')) {
+                return `<span class="price-text price-free">🎁 БЕСПЛАТНО</span>`;
+            }
+            return `<span class="price-text">💰 ${price} ₽</span>`;
+        }
+
+        // Вытаскиваем число из строки цены (чтобы фильтровать)
+        function getNumericPrice(price) {
+            if (!price || price == '-' || String(price).toLowerCase().includes('бесплатно')) return 0;
+            return parseInt(String(price).replace(/\D/g, '')) || 0;
+        }
+
+        function renderCourses(courses) {
             const container = document.getElementById('courses-container');
-            container.innerHTML = `<h3 style="margin: 0 0 15px 0; font-size: 16px; color: #43493E;">${title}</h3>`;
-
+            container.innerHTML = '';
+            
             if (courses.length === 0) {
-                container.innerHTML += '<p style="text-align:center;">Курсы не найдены.</p>';
+                container.innerHTML = '<p style="text-align:center; color:#666;">Курсов не найдено.</p>';
                 return;
             }
 
-            courses.forEach(course => {
+            courses.forEach(c => {
                 const card = document.createElement('div');
                 card.className = 'course-card';
                 card.innerHTML = `
-                    <div class="course-title">${course.title}</div>
-                    <div class="course-platform">Платформа: ${course.platform}</div>
+                    <div class="course-title">${c.title}</div>
                     <div class="course-footer">
-                        <span>💰 ${course.price || 'Бесплатно'}</span>
+                        ${formatPrice(c.price)}
                         <a href="#" class="btn-view" onclick="tg.close()">Смотреть</a>
                     </div>
                 `;
@@ -71,33 +93,44 @@
             });
         }
 
-        function filterCourses(category, btnElement, title) {
+        function setCategory(cat, btn) {
+            currentCategory = cat;
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btnElement.classList.add('active');
-
-            let filtered = [];
-            const keywords = ['panda', 'python', 'цеп'];
-
-            if (category === 'all') filtered = allCourses;
-            else if (category === 'python') {
-                filtered = allCourses.filter(c => keywords.some(k => c.title.toLowerCase().includes(k)));
-            } else if (category === 'other') {
-                filtered = allCourses.filter(c => !keywords.some(k => c.title.toLowerCase().includes(k)));
-            }
-            renderCourses(filtered, title);
+            btn.classList.add('active');
+            applyFilters();
         }
 
-        const API_URL = 'https://evict-gear-cozy.ngrok-free.dev/api/courses';
+        function applyFilters() {
+            const min = parseInt(document.getElementById('minPrice').value) || 0;
+            const max = parseInt(document.getElementById('maxPrice').value) || 999999;
+            const onlyFree = document.getElementById('onlyFree').checked;
+            
+            const keywords = ['panda', 'python', 'цеп'];
 
-        fetch(API_URL, { headers: { 'ngrok-skip-browser-warning': 'true' } })
-        .then(response => response.json())
+            const filtered = allCourses.filter(c => {
+                // 1. Фильтр категории
+                let matchCat = true;
+                if (currentCategory === 'python') matchCat = keywords.some(k => c.title.toLowerCase().includes(k));
+                if (currentCategory === 'other') matchCat = !keywords.some(k => c.title.toLowerCase().includes(k));
+                
+                // 2. Фильтр цены
+                const p = getNumericPrice(c.price);
+                let matchPrice = (p >= min && p <= max);
+                if (onlyFree) matchPrice = (p === 0);
+
+                return matchCat && matchPrice;
+            });
+            renderCourses(filtered);
+        }
+
+        // Загрузка
+        fetch('https://evict-gear-cozy.ngrok-free.dev/api/courses', { headers: { 'ngrok-skip-browser-warning': 'true' } })
+        .then(res => res.json())
         .then(data => {
             allCourses = data;
-            renderCourses(allCourses, 'ВСЕ ДОСТУПНЫЕ КУРСЫ');
+            applyFilters();
         })
-        .catch(err => {
-            document.getElementById('courses-container').innerHTML = 'Ошибка соединения с сервером.';
-        });
+        .catch(() => document.getElementById('courses-container').innerHTML = 'Ошибка сервера.');
     </script>
 </body>
 </html>
