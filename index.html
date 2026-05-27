@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITSkillCheap Web App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* Базовые настройки для эффекта Material You */
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f3f4ec; /* Твой основной кремовый фон */
+            color: #1a1c18;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Твои размытые кляксы на фоне сайта */
+        body::before, body::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px); /* Мощный честный расфокус */
+            opacity: 0.6;
+            z-index: 1;
+        }
+
+        /* Верхняя левая зеленая клякса */
+        body::before {
+            width: 250px;
+            height: 250px;
+            background-color: #A2B7A5;
+            top: -50px;
+            left: -50px;
+        }
+
+        /* Нижняя правая светлая клякса */
+        body::after {
+            width: 300px;
+            height: 300px;
+            background-color: #BCDEC2;
+            bottom: -50px;
+            right: -50px;
+        }
+
+        /* Контент поверх фона */
+        .container {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+            margin-top: 10px;
+        }
+
+        header h1 {
+            font-size: 24px;
+            margin: 0 0 8px 0;
+            color: #1a1c18;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            font-size: 14px;
+            color: #43493e;
+            margin: 0;
+        }
+
+        /* Стили для карточек-виджетов курсов */
+        .course-card {
+            background: rgba(255, 255, 255, 0.70); /* Полупрозрачное стекло */
+            backdrop-filter: blur(10px); /* Эффект матового стекла */
+            border-radius: 20px; /* Фирменное скругление Android */
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .course-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-0: 0 0 8px 0;
+            color: #1a1c18;
+        }
+
+        .course-platform {
+            font-size: 13px;
+            color: #5c6255;
+            background: #e2e4d8;
+            padding: 4px 10px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .course-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .course-price {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .price-free {
+            color: #2e6c3f;
+        }
+
+        .price-pay {
+            color: #1a1c18;
+        }
+
+        .btn-link {
+            background-color: #386a46; /* Фирменный зеленый цвет */
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 15px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>ITSkillCheap App</h1>
+            <p>Актуальные скидки без информационного шума</p>
+        </header>
+
+        <div class="course-card">
+            <div class="course-title">⚡ Электрические цепи</div>
+            <div class="course-platform">Stepik</div>
+            <div class="course-footer">
+                <div class="course-price price-free">🎁 БЕСПЛАТНО</div>
+                <a href="#" class="btn-link" onclick="tgClose()">Смотреть</a>
+            </div>
+        </div>
+
+        <div class="course-card">
+            <div class="course-title">🔹 Pandas для джунов</div>
+            <div class="course-platform">Stepik</div>
+            <div class="course-footer">
+                <div class="course-price price-pay">💰 390 ₽</div>
+                <a href="#" class="btn-link" onclick="tgClose()">Смотреть</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Сообщаем Телеграму, что приложение готово к показу
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand(); // Разворачиваем на весь экран смартфона
+
+        function tgClose() {
+            tg.close(); // Функция закрытия приложения при клике на курс
+        }
+    </script>
+</body>
+</html>
