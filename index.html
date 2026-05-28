@@ -11,33 +11,38 @@
         :root {
             --bg-color: #F4F6F0;
             --text-main: #1A1C18;
+            --text-secondary: #43493E;
             --btn-bg: #386A46;
             --price-free: #2E6C3F; 
         }
         body { font-family: 'Roboto', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 15px; }
         
+        /* 📌 НОВЫЙ КЛАСС: Делает шапку липкой и скрывает карточки под ней */
         .sticky-header {
             position: sticky;
             top: 0;
             z-index: 100;
             background-color: var(--bg-color);
             padding: 10px 0;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+            margin-top: -10px; /* Прижимаем к самому верху */
+            border-bottom: 1px solid rgba(0,0,0,0.05); /* Легкая граница снизу */
         }
 
         .tabs { display: flex; gap: 8px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 5px; }
-        .tabs::-webkit-scrollbar { display: none; }
+        .tabs::-webkit-scrollbar { display: none; } /* Скрываем полосу прокрутки для красоты */
         
-        .tab-btn { background: #E2E4D8; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; color: #386A46; cursor: pointer; }
+        .tab-btn { background: #E2E4D8; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; color: #386A46; cursor: pointer; white-space: nowrap; }
         .tab-btn.active { background: var(--btn-bg); color: #fff; }
 
-        .filter-panel { background: rgba(255,255,255,0.7); padding: 10px; border-radius: 12px; display: flex; flex-wrap: wrap; gap: 10px; }
-        .filter-panel input { width: 70px; padding: 6px; border-radius: 8px; border: 1px solid #ccc; }
+        .filter-panel { background: rgba(255,255,255,0.7); padding: 10px; border-radius: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .filter-panel input[type="number"] { width: 70px; padding: 6px; border-radius: 8px; border: 1px solid #ccc; font-family: inherit; }
         
-        .course-card { background: white; padding: 15px; border-radius: 16px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+        .course-card { background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 16px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
         .course-title { font-weight: 700; font-size: 16px; margin-bottom: 5px; }
         .course-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-        .btn-view { background: var(--btn-bg); color: white; padding: 8px 16px; border-radius: 20px; border: none; cursor: pointer; font-size: 13px; }
+        .price-text { font-weight: 600; font-size: 14px; }
+        .price-free { color: var(--price-free); }
+        .btn-view { background: var(--btn-bg); color: white; padding: 6px 14px; border-radius: 20px; text-decoration: none; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -48,14 +53,17 @@
             <button class="tab-btn" onclick="setCategory('python', this)">IT & Код</button>
             <button class="tab-btn" onclick="setCategory('other', this)">Хобби</button>
         </div>
+
         <div class="filter-panel">
             <input type="number" id="minPrice" placeholder="От ₽" oninput="applyFilters()">
             <input type="number" id="maxPrice" placeholder="До ₽" oninput="applyFilters()">
-            <label style="font-size: 12px; display: flex; align-items: center;"><input type="checkbox" id="onlyFree" onchange="applyFilters()"> Бесплатные</label>
+            <label style="font-size: 12px; display: flex; align-items: center; gap: 5px;">
+                <input type="checkbox" id="onlyFree" onchange="applyFilters()"> Только бесплатные
+            </label>
         </div>
     </div>
 
-    <div id="courses-container" style="margin-top: 15px;">Загрузка...</div>
+    <div id="courses-container" style="margin-top: 15px;">Загрузка данных...</div>
 
     <script>
         const tg = window.Telegram.WebApp;
@@ -65,18 +73,36 @@
         let allCourses = [];
         let currentCategory = 'all';
 
+        function formatPrice(price) {
+            if (!price || price == 0 || price == '-' || String(price).toLowerCase().includes('бесплатно')) {
+                return `<span class="price-text price-free">🎁 БЕСПЛАТНО</span>`;
+            }
+            return `<span class="price-text">💰 ${price} ₽</span>`;
+        }
+
+        function getNumericPrice(price) {
+            if (!price || price == '-' || String(price).toLowerCase().includes('бесплатно')) return 0;
+            return parseInt(String(price).replace(/\D/g, '')) || 0;
+        }
+
         function renderCourses(courses) {
             const container = document.getElementById('courses-container');
             container.innerHTML = '';
+            
+            if (courses.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#666; margin-top:20px;">Курсов не найдено.</p>';
+                return;
+            }
+
             courses.forEach(c => {
                 const card = document.createElement('div');
                 card.className = 'course-card';
                 card.innerHTML = `
                     <div class="course-title">${c.title}</div>
-                    <div style="font-size: 12px; color: #666;">${c.platform}</div>
+                    <div style="font-size: 12px; color: #666;">Платформа: <b>${c.platform}</b></div>
                     <div class="course-footer">
-                        <span>💰 ${c.price}</span>
-                        <button class="btn-view" onclick="tg.openLink('${c.url}')">Смотреть</button>
+                        ${formatPrice(c.price)}
+                        <a href="#" class="btn-view" onclick="tg.close()">Смотреть</a>
                     </div>
                 `;
                 container.appendChild(card);
@@ -95,26 +121,31 @@
             const max = parseInt(document.getElementById('maxPrice').value) || 999999;
             const onlyFree = document.getElementById('onlyFree').checked;
             
+            // 📌 Расширил фильтр, чтобы курсы с Udemy и Coursera тоже правильно сортировались
+            const keywords = ['panda', 'python', 'цеп', 'code', 'web', 'react', 'aws', 'machine', 'sql', 'разработ', 'figma'];
+
             const filtered = allCourses.filter(c => {
                 let matchCat = true;
-                if (currentCategory === 'python') matchCat = c.title.toLowerCase().includes('python') || c.title.toLowerCase().includes('code');
-                if (currentCategory === 'other') matchCat = !(c.title.toLowerCase().includes('python') || c.title.toLowerCase().includes('code'));
+                if (currentCategory === 'python') matchCat = keywords.some(k => c.title.toLowerCase().includes(k));
+                if (currentCategory === 'other') matchCat = !keywords.some(k => c.title.toLowerCase().includes(k));
                 
-                const priceNum = parseInt(c.price.replace(/\D/g, '')) || 0;
-                let matchPrice = (priceNum >= min && priceNum <= max);
-                if (onlyFree) matchPrice = (priceNum === 0);
-                
+                const p = getNumericPrice(c.price);
+                let matchPrice = (p >= min && p <= max);
+                if (onlyFree) matchPrice = (p === 0);
+
                 return matchCat && matchPrice;
             });
             renderCourses(filtered);
         }
 
+        // Загрузка данных с твоего ngrok
         fetch('https://evict-gear-cozy.ngrok-free.dev/api/courses', { headers: { 'ngrok-skip-browser-warning': 'true' } })
         .then(res => res.json())
         .then(data => {
             allCourses = data;
             applyFilters();
-        });
+        })
+        .catch(() => document.getElementById('courses-container').innerHTML = '<p style="text-align:center; margin-top:20px;">Ошибка сервера.</p>');
     </script>
 </body>
 </html>
