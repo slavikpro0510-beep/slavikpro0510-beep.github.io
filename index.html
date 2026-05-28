@@ -35,6 +35,19 @@
         .tab-btn.active { background: var(--btn-bg); color: #fff; }
 
         .filter-panel { background: rgba(255,255,255,0.7); padding: 10px; border-radius: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        
+        /* Стили для строки поиска */
+        .filter-panel input[type="text"] { 
+            width: 100%; 
+            padding: 8px 12px; 
+            border-radius: 10px; 
+            border: 1px solid #ccc; 
+            font-family: inherit; 
+            font-size: 14px; 
+            box-sizing: border-box;
+            margin-bottom: 5px;
+        }
+        
         .filter-panel input[type="number"] { width: 70px; padding: 6px; border-radius: 8px; border: 1px solid #ccc; font-family: inherit; }
         
         .course-card { background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 16px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
@@ -55,6 +68,8 @@
         </div>
 
         <div class="filter-panel">
+            <input type="text" id="searchQuery" placeholder="🔍 Поиск курса (например: рисование, python)..." oninput="applyFilters()">
+            
             <input type="number" id="minPrice" placeholder="От ₽" oninput="applyFilters()">
             <input type="number" id="maxPrice" placeholder="До ₽" oninput="applyFilters()">
             <label style="font-size: 12px; display: flex; align-items: center; gap: 5px;">
@@ -72,6 +87,63 @@
 
         let allCourses = [];
         let currentCategory = 'all';
+
+        // Реализация алгоритма Левенштейна для поиска опечаток
+        function levenshtein(a, b) {
+            const tmp = [];
+            for (let i = 0; i <= a.length; i++) { tmp[i] = [i]; }
+            for (let j = 0; j <= b.length; j++) { tmp[0][j] = j; }
+            for (let i = 1; i <= a.length; i++) {
+                for (let j = 1; j <= b.length; j++) {
+                    const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                    tmp[i][j] = Math.min(tmp[i - 1][j] + 1, tmp[i][j - 1] + 1, tmp[i - 1][j - 1] + cost);
+                }
+            }
+            return tmp[a.length][b.length];
+        }
+
+        // Функция "умного" нечеткого поиска
+        function fuzzyMatch(text, query) {
+            text = text.toLowerCase().trim();
+            query = query.toLowerCase().trim();
+            if (!query) return true;
+
+            // 1. Прямое совпадение подстроки
+            if (text.includes(query)) return true;
+
+            const textWords = text.split(/[\s,.\-():«»"']+/).filter(w => w.length > 0);
+            const queryWords = query.split(/[\s,.\-():«»"']+/).filter(w => w.length > 0);
+
+            if (queryWords.length === 0) return true;
+
+            let matchedWordsCount = 0;
+
+            for (const qWord of queryWords) {
+                let wordMatched = false;
+
+                for (const tWord of textWords) {
+                    // Проверка на частичное совпадение слов
+                    if (tWord.includes(qWord) || qWord.includes(tWord)) {
+                        wordMatched = true;
+                        break;
+                    }
+
+                    // Проверка на опечатки (если слово длиннее 3 символов)
+                    if (qWord.length >= 3 && tWord.length >= 3) {
+                        const maxDist = qWord.length > 5 ? 2 : 1; // Допускаем 1-2 ошибки в зависимости от длины
+                        if (levenshtein(qWord, tWord) <= maxDist) {
+                            wordMatched = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (wordMatched) matchedWordsCount++;
+            }
+
+            // Если совпало большинство слов из запроса, возвращаем true
+            return matchedWordsCount / queryWords.length >= 0.7;
+        }
 
         function formatPrice(price) {
             if (!price || price == 0 || price == '-' || String(price).toLowerCase().includes('бесплатно')) {
@@ -120,6 +192,7 @@
             const min = parseInt(document.getElementById('minPrice').value) || 0;
             const max = parseInt(document.getElementById('maxPrice').value) || 999999;
             const onlyFree = document.getElementById('onlyFree').checked;
+            const searchQuery = document.getElementById('searchQuery').value; // Получаем текст поиска
             
             const keywords = ['panda', 'python', 'цеп', 'code', 'web', 'react', 'aws', 'machine', 'sql', 'разработ', 'figma'];
 
@@ -132,7 +205,10 @@
                 let matchPrice = (p >= min && p <= max);
                 if (onlyFree) matchPrice = (p === 0);
 
-                return matchCat && matchPrice;
+                // Применяем умный поиск к названию курса и названию платформы
+                let matchSearch = fuzzyMatch(c.title, searchQuery) || fuzzyMatch(c.platform, searchQuery);
+
+                return matchCat && matchPrice && matchSearch;
             });
             renderCourses(filtered);
         }
