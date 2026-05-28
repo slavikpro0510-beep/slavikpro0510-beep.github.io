@@ -90,7 +90,7 @@
             container.innerHTML = '';
             
             if (courses.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#666; margin-top:20px;">Курсов не найдено.</p>';
+                container.innerHTML = '<p style="text-align:center;">Курсов пока нет...</p>';
                 return;
             }
 
@@ -99,10 +99,10 @@
                 card.className = 'course-card';
                 card.innerHTML = `
                     <div class="course-title">${c.title}</div>
-                    <div style="font-size: 12px; color: #666;">Платформа: <b>${c.platform}</b></div>
+                    <div style="font-size: 12px; color: #666;">Платформа: ${c.platform}</div>
                     <div class="course-footer">
-                        ${formatPrice(c.price)}
-                        <a href="#" class="btn-view" onclick="tg.close()">Смотреть</a>
+                        <span>💰 ${c.price}</span>
+                        <button class="btn-view" onclick="tg.openLink('${c.url}')">Смотреть</button>
                     </div>
                 `;
                 container.appendChild(card);
@@ -137,6 +137,7 @@
             });
             renderCourses(filtered);
         }
+        
 
         // Загрузка данных с твоего ngrok
         fetch('https://evict-gear-cozy.ngrok-free.dev/api/courses', { headers: { 'ngrok-skip-browser-warning': 'true' } })
